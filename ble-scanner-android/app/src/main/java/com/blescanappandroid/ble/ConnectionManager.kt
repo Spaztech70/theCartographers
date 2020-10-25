@@ -1,6 +1,4 @@
 /*
- * Copyright 2019 Punch Through Design LLC
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,7 +12,7 @@
  * limitations under the License.
  */
 
-package com.punchthrough.blestarterappandroid.ble
+package com.blescanappandroid.ble
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
@@ -36,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 private const val GATT_MIN_MTU_SIZE = 23
+
 /** Maximum BLE MTU size as defined in gatt_api.h. */
 private const val GATT_MAX_MTU_SIZE = 517
 
@@ -58,7 +57,9 @@ object ConnectionManager {
     }
 
     fun registerListener(listener: ConnectionEventListener) {
-        if (listeners.map { it.get() }.contains(listener)) { return }
+        if (listeners.map { it.get() }.contains(listener)) {
+            return
+        }
         listeners.add(WeakReference(listener))
         listeners = listeners.filter { it.get() != null }.toMutableSet()
         Timber.d("Added listener $listener, ${listeners.size} listeners total")
@@ -397,7 +398,12 @@ object ConnectionManager {
                 when (status) {
                     BluetoothGatt.GATT_SUCCESS -> {
                         Timber.i("Read characteristic $uuid | value: ${value.toHexString()}")
-                        listeners.forEach { it.get()?.onCharacteristicRead?.invoke(gatt.device, this) }
+                        listeners.forEach {
+                            it.get()?.onCharacteristicRead?.invoke(
+                                gatt.device,
+                                this
+                            )
+                        }
                     }
                     BluetoothGatt.GATT_READ_NOT_PERMITTED -> {
                         Timber.e("Read not permitted for $uuid!")
@@ -422,7 +428,12 @@ object ConnectionManager {
                 when (status) {
                     BluetoothGatt.GATT_SUCCESS -> {
                         Timber.i("Wrote to characteristic $uuid | value: ${value.toHexString()}")
-                        listeners.forEach { it.get()?.onCharacteristicWrite?.invoke(gatt.device, this) }
+                        listeners.forEach {
+                            it.get()?.onCharacteristicWrite?.invoke(
+                                gatt.device,
+                                this
+                            )
+                        }
                     }
                     BluetoothGatt.GATT_WRITE_NOT_PERMITTED -> {
                         Timber.e("Write not permitted for $uuid!")
@@ -486,7 +497,12 @@ object ConnectionManager {
                         if (isCccd()) {
                             onCccdWrite(gatt, value, characteristic)
                         } else {
-                            listeners.forEach { it.get()?.onDescriptorWrite?.invoke(gatt.device, this) }
+                            listeners.forEach {
+                                it.get()?.onDescriptorWrite?.invoke(
+                                    gatt.device,
+                                    this
+                                )
+                            }
                         }
                     }
                     BluetoothGatt.GATT_WRITE_NOT_PERMITTED -> {
@@ -550,7 +566,8 @@ object ConnectionManager {
             with(intent) {
                 if (action == BluetoothDevice.ACTION_BOND_STATE_CHANGED) {
                     val device = getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-                    val previousBondState = getIntExtra(BluetoothDevice.EXTRA_PREVIOUS_BOND_STATE, -1)
+                    val previousBondState =
+                        getIntExtra(BluetoothDevice.EXTRA_PREVIOUS_BOND_STATE, -1)
                     val bondState = getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, -1)
                     val bondTransition = "${previousBondState.toBondStateDescription()} to " +
                         bondState.toBondStateDescription()

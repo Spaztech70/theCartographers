@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package com.punchthrough.blestarterappandroid
+package com.blescanappandroid
 
-import android.bluetooth.le.ScanResult
 import android.bluetooth.BluetoothClass
+import android.bluetooth.le.ScanResult
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
@@ -40,7 +41,7 @@ class ScanResultAdapter(
             parent,
             false
         )
-        return ViewHolder(view, deviceClass, onClickListener )
+        return ViewHolder(view, deviceClass, onClickListener)
     }
 
     override fun getItemCount() = items.size
@@ -53,7 +54,8 @@ class ScanResultAdapter(
     class ViewHolder(
         private val view: View,
         private val deviceClass: BluetoothClass.Device,
-        private val onClickListener: ((device: ScanResult) -> Unit)
+        private val onClickListener: ((device: ScanResult) -> Unit),
+        private var fileData: String = ""
 
     ) : RecyclerView.ViewHolder(view) {
 
@@ -63,6 +65,12 @@ class ScanResultAdapter(
             view.mac_address.text = result.device.address
             view.signal_strength.text = "${result.rssi} dBm"
             view.setOnClickListener { onClickListener.invoke(result) }
+            fileData += "Device class: " + filterClassDevice(result.device.bluetoothClass.deviceClass).toString() + ", "
+            fileData += "RSSI signal: " + "${result.rssi} dBm" + ", "
+            fileData += "Device name: " + (result.device.name ?: "Unnamed") + ", "
+            fileData += "Device address: " + result.device.address + "\n"
+            Log.d("ble_log.txt", fileData)
+
         }
 
         private fun filterClassDevice(i: Int): CharSequence? {
@@ -84,5 +92,4 @@ class ScanResultAdapter(
             return name
         }
     }
-
 }

@@ -1,6 +1,4 @@
 /*
- * Copyright 2019 Punch Through Design LLC
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,7 +12,7 @@
  * limitations under the License.
  */
 
-package com.punchthrough.blestarterappandroid
+package com.blescanappandroid
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -30,14 +28,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
-import com.punchthrough.blestarterappandroid.ble.ConnectionEventListener
-import com.punchthrough.blestarterappandroid.ble.ConnectionManager
-import com.punchthrough.blestarterappandroid.ble.isIndicatable
-import com.punchthrough.blestarterappandroid.ble.isNotifiable
-import com.punchthrough.blestarterappandroid.ble.isReadable
-import com.punchthrough.blestarterappandroid.ble.isWritable
-import com.punchthrough.blestarterappandroid.ble.isWritableWithoutResponse
-import com.punchthrough.blestarterappandroid.ble.toHexString
+import com.blescanappandroid.ble.ConnectionEventListener
+import com.blescanappandroid.ble.ConnectionManager
+import com.blescanappandroid.ble.isIndicatable
+import com.blescanappandroid.ble.isNotifiable
+import com.blescanappandroid.ble.isReadable
+import com.blescanappandroid.ble.isWritable
+import com.blescanappandroid.ble.isWritableWithoutResponse
+import com.blescanappandroid.ble.toHexString
 import kotlinx.android.synthetic.main.activity_ble_operations.characteristics_recycler_view
 import kotlinx.android.synthetic.main.activity_ble_operations.log_scroll_view
 import kotlinx.android.synthetic.main.activity_ble_operations.log_text_view
@@ -263,12 +261,14 @@ class BleOperationsActivity : AppCompatActivity() {
     }
 
     private fun Context.hideKeyboard(view: View) {
-        val inputMethodManager = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
+        val inputMethodManager =
+            getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
         inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
     private fun EditText.showKeyboard() {
-        val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        val inputMethodManager =
+            getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         requestFocus()
         inputMethodManager.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
     }

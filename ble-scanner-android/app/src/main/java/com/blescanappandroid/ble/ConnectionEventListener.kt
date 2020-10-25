@@ -1,6 +1,4 @@
 /*
- * Copyright 2019 Punch Through Design LLC
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,7 +12,7 @@
  * limitations under the License.
  */
 
-package com.punchthrough.blestarterappandroid.ble
+package com.blescanappandroid.ble
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt

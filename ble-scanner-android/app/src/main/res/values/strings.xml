@@ -1,6 +1,4 @@
 <!--
-  ~ Copyright 2019 Punch Through Design LLC
-  ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
   ~ You may obtain a copy of the License at
@@ -17,4 +15,5 @@
 <resources>
     <string name="app_name">Aggie oCT COVID BLE Scan</string>
     <string name="ble_playground">BLE Signals</string>
+    <string name="UUID">Device ID</string>
 </resources>

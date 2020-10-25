@@ -1,6 +1,4 @@
 /*
- * Copyright 2019 Punch Through Design LLC
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,7 +12,7 @@
  * limitations under the License.
  */
 
-package com.punchthrough.blestarterappandroid
+package com.blescanappandroid
 
 import android.Manifest
 import android.app.Activity
@@ -36,8 +34,8 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
-import com.punchthrough.blestarterappandroid.ble.ConnectionEventListener
-import com.punchthrough.blestarterappandroid.ble.ConnectionManager
+import com.blescanappandroid.ble.ConnectionEventListener
+import com.blescanappandroid.ble.ConnectionManager
 import kotlinx.android.synthetic.main.activity_main.scan_button
 import kotlinx.android.synthetic.main.activity_main.scan_results_recycler_view
 import org.jetbrains.anko.alert

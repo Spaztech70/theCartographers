@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.punchthrough.blestarterappandroid
+package com.blescanappandroid
 
 import android.bluetooth.BluetoothGattCharacteristic
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.punchthrough.blestarterappandroid.ble.printProperties
+import com.blescanappandroid.ble.printProperties
 import kotlinx.android.synthetic.main.row_characteristic.view.characteristic_properties
 import kotlinx.android.synthetic.main.row_characteristic.view.characteristic_uuid
 import org.jetbrains.anko.layoutInflater
@@ -49,6 +49,7 @@ class CharacteristicAdapter(
     class ViewHolder(
         private val view: View,
         private val onClickListener: ((characteristic: BluetoothGattCharacteristic) -> Unit)
+
     ) : RecyclerView.ViewHolder(view) {
 
         fun bind(characteristic: BluetoothGattCharacteristic) {
