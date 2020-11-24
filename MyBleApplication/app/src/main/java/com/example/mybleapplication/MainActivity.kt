@@ -2,38 +2,39 @@ package com.example.mybleapplication
 
 import android.Manifest
 import android.app.Activity
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothClass
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothGatt
+import android.bluetooth.*
+import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
-import android.bluetooth.le.ScanCallback
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import kotlinx.android.synthetic.main.activity_main.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentLinkedQueue
-
 import org.jetbrains.anko.alert
-import java.lang.Math.*
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.abs
 import kotlin.math.pow
-
-// import timber.log.Timber
 
 private const val ENABLE_BLUETOOTH_REQUEST_CODE = 1
 private const val LOCATION_PERMISSION_REQUEST_CODE = 2
+private const val CAUTION_DISTANCE = 15.0
+private const val THREAT_DISTANCE = 8.0
+private const val N = 10.0
+private const val TEN = 10.0
+private const val METERS_TO_FEET = 3.28083333
+private const val MILLISECONDS = 10000
+
+var listDevice = mutableListOf<DeviceLinkedList>()
+var storeDevice = mutableListOf<DeviceLinkedList>()
 
 class MainActivity : AppCompatActivity() {
 
@@ -48,7 +49,8 @@ class MainActivity : AppCompatActivity() {
     private val bleScanner by lazy {
         bluetoothAdapter.bluetoothLeScanner
     }
-    private val scanSettings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
+    private val scanSettings =
+        ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
 
     //Sets the label for the button between Start/Stop Scan
     private var isScanning = false
@@ -61,25 +63,27 @@ class MainActivity : AppCompatActivity() {
         get() = hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
 
     private val scanResults = mutableListOf<ScanResult>()
+    private val threatScanResults = mutableListOf<DeviceLinkedList>()
+    private val cautionScanResults = mutableListOf<DeviceLinkedList>()
+    private val safeScanResults = mutableListOf<DeviceLinkedList>()
     private val deviceClass = BluetoothClass.Device()
-    // private val device: BluetoothDevice()
 
 
     private val deviceGattMap = ConcurrentHashMap<BluetoothDevice, BluetoothGatt>()
     private fun BluetoothDevice.isConnected() = deviceGattMap.containsKey(this)
 
     private val scanSafeResultAdapter: ScanResultAdapter by lazy {
-        ScanResultAdapter(scanResults, deviceClass) { result ->
+        ScanResultAdapter(safeScanResults, deviceClass) { result ->
             if (isScanning) stopBleScan()
         }
     }
     private val scanCautionResultAdapter: ScanResultAdapter by lazy {
-        ScanResultAdapter(scanResults, deviceClass) { result ->
+        ScanResultAdapter(cautionScanResults, deviceClass) { result ->
             if (isScanning) stopBleScan()
         }
     }
     private val scanThreatResultAdapter: ScanResultAdapter by lazy {
-        ScanResultAdapter(scanResults, deviceClass) { result ->
+        ScanResultAdapter(threatScanResults, deviceClass) { result ->
             if (isScanning) stopBleScan()
         }
     }
@@ -99,7 +103,7 @@ class MainActivity : AppCompatActivity() {
         setupCautionRecyclerView()
         setupThreatRecyclerView()
     }
-/*
+
     override fun onResume() {
         super.onResume()
         // ConnectionManager.registerListener(connectionEventListener)
@@ -118,8 +122,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-*/
-/*
+
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -136,7 +140,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-*/
+
     /*******************************************
      * Private functions
      *******************************************/
@@ -156,7 +160,10 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !isLocationPermissionGranted) {
             requestLocationPermission()
         } else {
-            scanResults.clear()
+            // scanResults.clear()
+            threatScanResults.clear()
+            cautionScanResults.clear()
+            safeScanResults.clear()
             scanSafeResultAdapter.notifyDataSetChanged()
             scanCautionResultAdapter.notifyDataSetChanged()
             scanThreatResultAdapter.notifyDataSetChanged()
@@ -171,7 +178,6 @@ class MainActivity : AppCompatActivity() {
         bleScanner.stopScan(scanCallback)
         isScanning = false
     }
-
 
 
     private fun requestLocationPermission() {
@@ -221,7 +227,7 @@ class MainActivity : AppCompatActivity() {
                 RecyclerView.VERTICAL,
                 false
             )
-            isNestedScrollingEnabled = false
+            isNestedScrollingEnabled = true
         }
 
         val animator = scan_results_caution_view.itemAnimator
@@ -254,11 +260,9 @@ class MainActivity : AppCompatActivity() {
     private val scanCallback = object : ScanCallback() {
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-            val indexQuery = scanResults.indexOfFirst { it.device.address == result.device.address }
-            // I wonder if I create an if-else chain here such that
-            val N = 10.0
-            val ten = 10.0
-            val metersToFeet = 3.28083333
+            // val indexQuery =  scanResults.indexOfFirst { it.device.address == result.device.address }
+
+
             /*
             Formula:
             Distance
@@ -267,13 +271,18 @@ class MainActivity : AppCompatActivity() {
             N (Constant depends on the Environmental factor. Range 2-4)
             Distance = 10 ^ ((Measured Power – RSSI)/(10 * N))
              */
-            var distance = metersToFeet * ten.pow((result.txPower + result.rssi).toDouble() / (ten * N))
+            var distance =
+                METERS_TO_FEET * TEN.pow((result.txPower + result.rssi).toDouble() / (TEN * N))
 
+            /*
+            The contents of each display are coming from here.
+             */
+            /* DEPRECATED
             if (indexQuery != -1) { // A scan result already exists with the same address
                 scanResults[indexQuery] = result
-                if (distance < 6.5) {
+                if (distance < THREAT_DISTANCE) {
                     scanSafeResultAdapter.notifyItemChanged(indexQuery)
-                } else if (distance < 15.0) {
+                } else if (distance < CAUTION_DISTANCE) {
                     scanCautionResultAdapter.notifyItemChanged(indexQuery)
                 }
                 else {
@@ -284,23 +293,100 @@ class MainActivity : AppCompatActivity() {
                     // Timber.i("Found BLE device! Name: ${name ?: "Unnamed"}, address: $address")
                 }
                 scanResults.add(result)
-                if (distance < 6.5) {
+                if (distance < THREAT_DISTANCE) {
                     scanSafeResultAdapter.notifyItemInserted(scanResults.size - 1)
-                } else if (distance < 15.0) {
+                } else if (distance < CAUTION_DISTANCE) {
                     scanCautionResultAdapter.notifyItemInserted(scanResults.size - 1)
                 }
                 else {
                     scanThreatResultAdapter.notifyItemInserted(scanResults.size - 1)
                 }
+            }*/
+
+            /* we can store the results of the scan in the DeviceLinkedList here
+                * device ID (mac or UUID)
+                * distance
+             * check deviceList for existence of device
+             * update list
+                * update distance OR
+                * add device to list
+             * sort list
+             * store markers for begin/end indexes for the 3 safety zones
+             * call the different scan Results Adapters and assign it a new begin/end portion of the deviceList to display
+             */
+            var found = false
+            var stored = false
+            var i = 0
+            var index = 0
+
+            // search list for device
+            while (index < storeDevice.size && !stored) {
+                if (storeDevice[index].getId() == result.device.address){
+                    stored = true
+                    i = index
+                }
+                index++
             }
-            // In ScanResultAdapter, a list of nearby devices should have been updated in a database object
-            // after 1 second, stop BLE scan
-            // Record devices to database
-            // in database, CHECK: for each device to be updated, remove entries for that device > 24 hours old
-            // in ROOM database, add new contact entry for each device (each entry = 10 seconds of contact)
-            // in ROOM database, CHECK: if a device has been in cumulative contact for > 15 minutes, popup a warning to the user
-            // after 10 seconds, resume BLE scan
-            // TODO Timber records logs. A log of each device
+            if (stored){
+                listDevice.add(storeDevice[i])
+                storeDevice.removeAt(i)
+                listDevice[listDevice.size-1].setCurrentTime(System.currentTimeMillis())
+            }
+            index = 0
+            while (index < listDevice.size && !found) {
+                if (listDevice[index].getId() == result.device.address) {
+                    found = true
+                    i = index
+                }
+                if ((System.currentTimeMillis() - listDevice[index].getCurrentTime()) > MILLISECONDS) {
+                    storeDevice.add(listDevice[index])
+                    listDevice.removeAt(index)
+                    index = 0
+                    found = false
+                }
+                else index++
+            }
+
+            if (found && !stored && listDevice.size > 0) {
+                if (distance <= THREAT_DISTANCE) {
+                    listDevice[i].updateTime()
+                }
+                listDevice[i].setDistance(distance)
+            } else if (!found && !stored){
+                // add device to deviceList
+                listDevice.add(DeviceLinkedList(result))
+            }
+            // sort listDevice
+            if (listDevice.size > 1) {
+                listDevice.sortBy { it.getDistance() }
+            }
+
+            // clear each of the recycler view ScanResult lists
+            // dataList.clear()
+            threatScanResults.clear()
+            cautionScanResults.clear()
+            safeScanResults.clear()
+            // notify each of the recycler views that the set has changed
+            // recyclerView?.adapter?.notifyDataSetChanged()
+            scanThreatResultAdapter.notifyDataSetChanged()
+            scanCautionResultAdapter.notifyDataSetChanged()
+            scanSafeResultAdapter.notifyDataSetChanged()
+            // re-populate the lists
+            index = 0
+            while (index < listDevice.size) {
+                if (listDevice[index].getDistance() <= THREAT_DISTANCE)
+                    threatScanResults.add(listDevice[index])
+                else if (listDevice[index].getDistance() <= CAUTION_DISTANCE)
+                    cautionScanResults.add(listDevice[index])
+                else safeScanResults.add(listDevice[index])
+                index++
+            }
+            // call each of the recycler view ScanResult lists
+            // recyclerView?.adapter?.notifyDataSetChanged()
+            scanThreatResultAdapter.notifyDataSetChanged()
+            scanCautionResultAdapter.notifyDataSetChanged()
+            scanSafeResultAdapter.notifyDataSetChanged()
+
         }
 
         override fun onScanFailed(errorCode: Int) {

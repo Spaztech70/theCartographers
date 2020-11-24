@@ -1,7 +1,6 @@
 package com.example.mybleapplication
 
 import android.bluetooth.BluetoothClass
-import android.bluetooth.le.ScanResult
 import android.os.Build
 import android.view.View
 import android.view.ViewGroup
@@ -9,22 +8,21 @@ import androidx.annotation.RequiresApi
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.scan_results.view.*
 import org.jetbrains.anko.layoutInflater
-import java.lang.Math.pow
-import java.util.*
-import kotlin.math.pow
 
-class ScanResultAdapter (private val items: List<ScanResult>,
-                         private val deviceClass: BluetoothClass.Device,
-                         private val onClickListener: ((device: ScanResult) -> Unit)):
-                        RecyclerView.Adapter<ScanResultAdapter.ViewHolder>(){
-     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-         val view = parent.context.layoutInflater.inflate(
-             R.layout.scan_results,
-             parent,
-             false
-         )
-         return ViewHolder(view, onClickListener)
-     }
+class ScanResultAdapter(
+    private val items: List<DeviceLinkedList>,
+    private val deviceClass: BluetoothClass.Device,
+    private val onClickListener: ((device: DeviceLinkedList) -> Unit)
+) :
+    RecyclerView.Adapter<ScanResultAdapter.ViewHolder>() {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = parent.context.layoutInflater.inflate(
+            R.layout.scan_results,
+            parent,
+            false
+        )
+        return ViewHolder(view, onClickListener)
+    }
 
     override fun getItemCount() = items.size
 
@@ -34,28 +32,33 @@ class ScanResultAdapter (private val items: List<ScanResult>,
         holder.bind(item)
     }
 
-     class ViewHolder(private val view: View,
-                      private val onClickListener: ((device: ScanResult) -> Unit)) :
-         RecyclerView.ViewHolder(view) {
-         private lateinit var date: Date
-         private val N = 10.0
-         private val ten = 10.0
-         private val metersToFeet = 3.28083333
 
-         @RequiresApi(Build.VERSION_CODES.O)
-         fun bind(result: ScanResult) {
-             view.device_class.text = filterClassDevice(result.device.bluetoothClass.deviceClass)
-             view.device_name.text = result.device.name ?: "Unnamed"
-             view.device_mac_address.text = result.device.address
-             view.device_signal.text = result.rssi.toString() + " dBm"
-             val distance = metersToFeet * ten.pow(((result.txPower) + (result.rssi)).toDouble()/(ten*N))
-             view.device_distance.text = (result.txPower).toString()
-             view.device_distance.text = distance.toInt().toString() + " ft"
-             view.setOnClickListener { onClickListener.invoke(result) }
+    class ViewHolder(
+        private val view: View,
+        private val onClickListener: ((device: DeviceLinkedList) -> Unit)
+    ) :
+        RecyclerView.ViewHolder(view) {
+        @RequiresApi(Build.VERSION_CODES.O)
+        fun bind(result: DeviceLinkedList) {
+            // PULL DEVICE INFO FROM ARRAY OF LINKEDLIST
+            view.device_mac_address.text = result.getId()
+            view.device_distance.text = "%.2f".format(result.getDistance()) + "ft"
+            view.time_delta.text = "%.2f".format(((System.currentTimeMillis() - result.getCurrentTime())/1000).toDouble()) + "sec"
+            view.setOnClickListener {
+                onClickListener.invoke(result)
+                /* DEPRECATED
+                // view.device_class.text = filterClassDevice(result.device.bluetoothClass.deviceClass)
+                // view.device_name.text = result.device.name ?: "Unnamed"
+                // view.device_signal.text = result.rssi.toString() + " dBm"
+                // val distance = METERS_TO_FEET * TEN.pow(((result.txPower) + (result.rssi)).toDouble()/(TEN*N))
+                // view.device_distance.text = (result.txPower).toString()
+                 */
+            }
 
-         }
+        }
 
-         // Takes the Device_Major identifier and converts it to a string for that device type
+        /* DEPRECATED
+        // Takes the Device_Major identifier and converts it to a string for that device type
          private fun filterClassDevice(i: Int): CharSequence? {
              var name = "$i"
              when (i) {
@@ -74,6 +77,7 @@ class ScanResultAdapter (private val items: List<ScanResult>,
              }
              return name
          }
-     }
+         */
+    }
 }
 
