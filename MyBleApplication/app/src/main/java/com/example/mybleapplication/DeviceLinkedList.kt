@@ -84,10 +84,10 @@ class DeviceLinkedList(scanResult: ScanResult){
     else {
         12.0
     })
-    private var uniqueId = scanResult.device.address
+    open var uniqueId = scanResult.device.address
     private var accumulatedTime = 0L
     private var currentTime = 0L
-    private var head: DeviceLinkedNode = DeviceLinkedNode()
+    open var head: DeviceLinkedNode = DeviceLinkedNode()
     private var tail = head
     private var cursor = head
     private var count = 0
@@ -102,6 +102,16 @@ class DeviceLinkedList(scanResult: ScanResult){
             head.addFutureNode()
             count++
         }
+        else {
+            head.updateTime()
+            cursor = tail
+            accumulatedTime = 0
+            do {
+                accumulatedTime += cursor.getTotalTime()
+                cursor = tail.getFuture()
+            } while (cursor != head)
+        }
+
     }
 
     open fun removeTail(){

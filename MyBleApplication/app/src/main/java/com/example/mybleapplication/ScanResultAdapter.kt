@@ -43,7 +43,7 @@ class ScanResultAdapter(
             // PULL DEVICE INFO FROM ARRAY OF LINKEDLIST
             view.device_mac_address.text = result.getId()
             view.device_distance.text = "%.2f".format(result.getDistance()) + "ft"
-            view.time_delta.text = "%.2f".format(((System.currentTimeMillis() - result.getCurrentTime())/1000).toDouble()) + "sec"
+            view.time_delta.text = "%.2f".format((result.getAccTime()/1000).toDouble()) + "sec"
             view.setOnClickListener {
                 onClickListener.invoke(result)
                 /* DEPRECATED

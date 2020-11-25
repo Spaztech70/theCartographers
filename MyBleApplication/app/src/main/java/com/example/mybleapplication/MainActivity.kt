@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.alert
 import java.util.concurrent.ConcurrentHashMap
@@ -32,6 +33,12 @@ private const val N = 10.0
 private const val TEN = 10.0
 private const val METERS_TO_FEET = 3.28083333
 private const val MILLISECONDS = 10000
+private const val CROWD_MIN = 6
+private const val CONTINUOUS_CONTACT = 30 // seconds
+private const val ACCUMULATED_CONTACT = 60 // seconds
+private const val CROWD_MESSAGE = "!!ALERT!!\nYou are in a crowd. \nGet clear."
+private const val CONTINUOUS_CONTACT_MESSAGE = "!!ALERT!!\nContinuous contact\nwith same person.\nMaintain distance."
+private const val ACCUMULATED_CONTACT_MESSAGE = "!!ALERT!!\nRepeated contact with\nsame person. Stay safe."
 
 var listDevice = mutableListOf<DeviceLinkedList>()
 var storeDevice = mutableListOf<DeviceLinkedList>()
@@ -87,6 +94,11 @@ class MainActivity : AppCompatActivity() {
             if (isScanning) stopBleScan()
         }
     }
+
+    // TODO Snackbars for the pop-up warnings
+    // TODO private val crowdWarning: Snackbar = Snackbar.make(findViewById(R.id.threat_view), CROWD_MESSAGE, Snackbar.LENGTH_LONG)
+    // TODO private var continuousWarning: Snackbar = Snackbar.make(findViewById(R.id.scan_results_caution_view), CONTINUOUS_CONTACT_MESSAGE, Snackbar.LENGTH_LONG)
+    // TODO private var accumulatedWarning: Snackbar = Snackbar.make(findViewById(R.id.scan_results_safe_view), ACCUMULATED_CONTACT_MESSAGE, Snackbar.LENGTH_LONG)
 
 
     /*******************************************
@@ -150,11 +162,6 @@ class MainActivity : AppCompatActivity() {
             startActivityForResult(enableBtIntent, ENABLE_BLUETOOTH_REQUEST_CODE)
         }
     }
-
-    // TODO implement an interval scan in this function
-    // TODO 1) Scan for 1 second, record list of found devices
-    // TODO 2) Pause scan for 10 seconds, update database of found devices
-    // TODO 3) go to step 1
 
     private fun startBleScan() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !isLocationPermissionGranted) {
@@ -260,9 +267,6 @@ class MainActivity : AppCompatActivity() {
     private val scanCallback = object : ScanCallback() {
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-            // val indexQuery =  scanResults.indexOfFirst { it.device.address == result.device.address }
-
-
             /*
             Formula:
             Distance
@@ -277,32 +281,6 @@ class MainActivity : AppCompatActivity() {
             /*
             The contents of each display are coming from here.
              */
-            /* DEPRECATED
-            if (indexQuery != -1) { // A scan result already exists with the same address
-                scanResults[indexQuery] = result
-                if (distance < THREAT_DISTANCE) {
-                    scanSafeResultAdapter.notifyItemChanged(indexQuery)
-                } else if (distance < CAUTION_DISTANCE) {
-                    scanCautionResultAdapter.notifyItemChanged(indexQuery)
-                }
-                else {
-                    scanThreatResultAdapter.notifyItemChanged(indexQuery)
-                }
-            } else {
-                with(result.device) {
-                    // Timber.i("Found BLE device! Name: ${name ?: "Unnamed"}, address: $address")
-                }
-                scanResults.add(result)
-                if (distance < THREAT_DISTANCE) {
-                    scanSafeResultAdapter.notifyItemInserted(scanResults.size - 1)
-                } else if (distance < CAUTION_DISTANCE) {
-                    scanCautionResultAdapter.notifyItemInserted(scanResults.size - 1)
-                }
-                else {
-                    scanThreatResultAdapter.notifyItemInserted(scanResults.size - 1)
-                }
-            }*/
-
             /* we can store the results of the scan in the DeviceLinkedList here
                 * device ID (mac or UUID)
                 * distance
@@ -337,11 +315,16 @@ class MainActivity : AppCompatActivity() {
                 if (listDevice[index].getId() == result.device.address) {
                     found = true
                     i = index
+                    if (listDevice[index].getAccTime() >= ACCUMULATED_CONTACT){
+                        // TODO accumulatedWarning.show()
+                    }
+                    if (listDevice[index].head.getTotalTime() >= CONTINUOUS_CONTACT){
+                        // TODO continuousWarning.show()
+                    }
                 }
                 if ((System.currentTimeMillis() - listDevice[index].getCurrentTime()) > MILLISECONDS) {
                     storeDevice.add(listDevice[index])
                     listDevice.removeAt(index)
-                    index = 0
                     found = false
                 }
                 else index++
@@ -386,7 +369,9 @@ class MainActivity : AppCompatActivity() {
             scanThreatResultAdapter.notifyDataSetChanged()
             scanCautionResultAdapter.notifyDataSetChanged()
             scanSafeResultAdapter.notifyDataSetChanged()
-
+            if (threatScanResults.size >= CROWD_MIN) {
+                // TODO crowdWarning.show()
+            }
         }
 
         override fun onScanFailed(errorCode: Int) {
