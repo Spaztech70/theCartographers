@@ -86,4 +86,10 @@ class DeviceLinkedNode(){
     open fun getFuture(): DeviceLinkedNode{
         return future
     }
+
+    open fun setNewTime(sTime: Long) {
+        startTime = sTime
+        updateTime()
+    }
+
 }

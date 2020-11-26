@@ -11,6 +11,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock.sleep
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -20,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.delay
 import org.jetbrains.anko.alert
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
@@ -28,17 +30,21 @@ import kotlin.math.pow
 private const val ENABLE_BLUETOOTH_REQUEST_CODE = 1
 private const val LOCATION_PERMISSION_REQUEST_CODE = 2
 private const val CAUTION_DISTANCE = 15.0
-private const val THREAT_DISTANCE = 8.0
+private const val THREAT_DISTANCE = 6.0 // TODO change to 6
 private const val N = 10.0
 private const val TEN = 10.0
 private const val METERS_TO_FEET = 3.28083333
+private const val MEASURED_POWER_DEFAULT = 5.0
 private const val MILLISECONDS = 10000
-private const val CROWD_MIN = 6
-private const val CONTINUOUS_CONTACT = 30 // seconds
-private const val ACCUMULATED_CONTACT = 60 // seconds
-private const val CROWD_MESSAGE = "!!ALERT!!\nYou are in a crowd. \nGet clear."
-private const val CONTINUOUS_CONTACT_MESSAGE = "!!ALERT!!\nContinuous contact\nwith same person.\nMaintain distance."
-private const val ACCUMULATED_CONTACT_MESSAGE = "!!ALERT!!\nRepeated contact with\nsame person. Stay safe."
+private const val CROWD_MIN = 6         // TODO change to 6
+private const val BUBBLE_MAX = 1        // TODO set at 1
+private const val ONE_DAY = 86400000 // milliseconds in one day
+private const val CONTINUOUS_CONTACT = 300 // seconds TODO change to 300
+private const val ACCUMULATED_CONTACT = 900 // seconds TODO change to 900
+private const val CROWD_MESSAGE = "!!ALERT!!\nYou are in a crowd.\nGet clear."
+private const val BUBBLE_MESSAGE = "!!ALERT!!\nSomeone is too close.\nMove away."
+private const val CONTINUOUS_CONTACT_MESSAGE = "!!ALERT!! Continuous contact with same person. Maintain distance."
+private const val ACCUMULATED_CONTACT_MESSAGE = "!!ALERT!! Repeated contact with same person. Stay safe."
 
 var listDevice = mutableListOf<DeviceLinkedList>()
 var storeDevice = mutableListOf<DeviceLinkedList>()
@@ -96,6 +102,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // TODO Snackbars for the pop-up warnings
+    // TODO private val bubbleWarning: Snackbar = Snackbar.make(findViewById(R.id.threat_view), BUBBLE_MESSAGE, Snackbar.LENGTH_LONG)
     // TODO private val crowdWarning: Snackbar = Snackbar.make(findViewById(R.id.threat_view), CROWD_MESSAGE, Snackbar.LENGTH_LONG)
     // TODO private var continuousWarning: Snackbar = Snackbar.make(findViewById(R.id.scan_results_caution_view), CONTINUOUS_CONTACT_MESSAGE, Snackbar.LENGTH_LONG)
     // TODO private var accumulatedWarning: Snackbar = Snackbar.make(findViewById(R.id.scan_results_safe_view), ACCUMULATED_CONTACT_MESSAGE, Snackbar.LENGTH_LONG)
@@ -275,8 +282,11 @@ class MainActivity : AppCompatActivity() {
             N (Constant depends on the Environmental factor. Range 2-4)
             Distance = 10 ^ ((Measured Power – RSSI)/(10 * N))
              */
-            var distance =
+            var distance = if(result.txPower > 0) {
                 METERS_TO_FEET * TEN.pow((result.txPower + result.rssi).toDouble() / (TEN * N))
+            } else {
+                MEASURED_POWER_DEFAULT
+            }
 
             /*
             The contents of each display are coming from here.
@@ -297,49 +307,64 @@ class MainActivity : AppCompatActivity() {
             var i = 0
             var index = 0
 
-            // search list for device
+            // search stored list for device
             while (index < storeDevice.size && !stored) {
                 if (storeDevice[index].getId() == result.device.address){
                     stored = true
                     i = index
+                    storeDevice[index].setDistance(distance)
                 }
                 index++
             }
             if (stored){
                 listDevice.add(storeDevice[i])
                 storeDevice.removeAt(i)
-                listDevice[listDevice.size-1].setCurrentTime(System.currentTimeMillis())
+                listDevice[listDevice.size-1].addHead()
             }
+
+            // search active list for device
             index = 0
             while (index < listDevice.size && !found) {
                 if (listDevice[index].getId() == result.device.address) {
                     found = true
                     i = index
-                    if (listDevice[index].getAccTime() >= ACCUMULATED_CONTACT){
-                        // TODO accumulatedWarning.show()
-                    }
-                    if (listDevice[index].head.getTotalTime() >= CONTINUOUS_CONTACT){
-                        // TODO continuousWarning.show()
+                    listDevice[index].setDistance(distance)
+                    if (listDevice[index].getDistance() <= CAUTION_DISTANCE) {
+                        listDevice[index].updateTime()
                     }
                 }
-                if ((System.currentTimeMillis() - listDevice[index].getCurrentTime()) > MILLISECONDS) {
-                    storeDevice.add(listDevice[index])
-                    listDevice.removeAt(index)
-                    found = false
-                }
-                else index++
+                index++
             }
 
-            if (found && !stored && listDevice.size > 0) {
-                if (distance <= THREAT_DISTANCE) {
-                    listDevice[i].updateTime()
-                }
-                listDevice[i].setDistance(distance)
-            } else if (!found && !stored){
+            if (found && listDevice[i].getAccTime() > ACCUMULATED_CONTACT*1000){
+                // TODO accumulatedWarning.show()
+                Snackbar.make(findViewById(R.id.threat_view), ACCUMULATED_CONTACT_MESSAGE, Snackbar.LENGTH_LONG).show()
+            }
+            if (found && listDevice[i].head.getTotalTime() > CONTINUOUS_CONTACT*1000){
+                // TODO continuousWarning.show()
+                Snackbar.make(findViewById(R.id.threat_view), CONTINUOUS_CONTACT_MESSAGE, Snackbar.LENGTH_LONG).show()
+            }
+
+            // New device. Add to active list
+            if (!found && !stored){
                 // add device to deviceList
                 listDevice.add(DeviceLinkedList(result))
             }
-            // sort listDevice
+
+            // check times for active devices. Move inactive devices to stored list
+            index = 0
+            while (index < listDevice.size) {
+                if ((System.currentTimeMillis() - listDevice[index].tail.getEndTime() > ONE_DAY)) {
+                        listDevice[index].removeTail()
+                    }
+                if ((System.currentTimeMillis() - listDevice[index].getCurrentTime()) > MILLISECONDS) {
+                    storeDevice.add(listDevice[index])
+                    listDevice.removeAt(index)
+                }
+                index++
+            }
+
+            // sort active device list
             if (listDevice.size > 1) {
                 listDevice.sortBy { it.getDistance() }
             }
@@ -354,7 +379,7 @@ class MainActivity : AppCompatActivity() {
             scanThreatResultAdapter.notifyDataSetChanged()
             scanCautionResultAdapter.notifyDataSetChanged()
             scanSafeResultAdapter.notifyDataSetChanged()
-            // re-populate the lists
+            // re-populate the recycler view lists
             index = 0
             while (index < listDevice.size) {
                 if (listDevice[index].getDistance() <= THREAT_DISTANCE)
@@ -369,8 +394,13 @@ class MainActivity : AppCompatActivity() {
             scanThreatResultAdapter.notifyDataSetChanged()
             scanCautionResultAdapter.notifyDataSetChanged()
             scanSafeResultAdapter.notifyDataSetChanged()
-            if (threatScanResults.size >= CROWD_MIN) {
+            if (cautionScanResults.size + threatScanResults.size >= CROWD_MIN) {
                 // TODO crowdWarning.show()
+                Snackbar.make(findViewById(R.id.threat_view), CROWD_MESSAGE, Snackbar.LENGTH_LONG).show()
+            }
+            if (threatScanResults.size >= BUBBLE_MAX) {
+                // TODO bubbleWarning.show()
+                Snackbar.make(findViewById(R.id.threat_view), BUBBLE_MESSAGE, Snackbar.LENGTH_LONG).show()
             }
         }
 
