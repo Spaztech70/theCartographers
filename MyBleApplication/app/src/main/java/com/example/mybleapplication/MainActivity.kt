@@ -1,4 +1,10 @@
 package com.example.mybleapplication
+/*
+ * @author Sanford Johnston
+ * @date November 25, 2020
+ * CS 488 Senior Project
+ * Aggie oCT COVID-19
+ */
 
 import android.Manifest
 import android.app.Activity
@@ -100,13 +106,6 @@ class MainActivity : AppCompatActivity() {
             if (isScanning) stopBleScan()
         }
     }
-
-    // TODO Snackbars for the pop-up warnings
-    // TODO private val bubbleWarning: Snackbar = Snackbar.make(findViewById(R.id.threat_view), BUBBLE_MESSAGE, Snackbar.LENGTH_LONG)
-    // TODO private val crowdWarning: Snackbar = Snackbar.make(findViewById(R.id.threat_view), CROWD_MESSAGE, Snackbar.LENGTH_LONG)
-    // TODO private var continuousWarning: Snackbar = Snackbar.make(findViewById(R.id.scan_results_caution_view), CONTINUOUS_CONTACT_MESSAGE, Snackbar.LENGTH_LONG)
-    // TODO private var accumulatedWarning: Snackbar = Snackbar.make(findViewById(R.id.scan_results_safe_view), ACCUMULATED_CONTACT_MESSAGE, Snackbar.LENGTH_LONG)
-
 
     /*******************************************
      * Activity function overrides
@@ -337,11 +336,11 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (found && listDevice[i].getAccTime() > ACCUMULATED_CONTACT*1000){
-                // TODO accumulatedWarning.show()
+                // TODO SHOW SNACKBAR
                 Snackbar.make(findViewById(R.id.threat_view), ACCUMULATED_CONTACT_MESSAGE, Snackbar.LENGTH_LONG).show()
             }
             if (found && listDevice[i].head.getTotalTime() > CONTINUOUS_CONTACT*1000){
-                // TODO continuousWarning.show()
+                // TODO SHOW SNACKBAR
                 Snackbar.make(findViewById(R.id.threat_view), CONTINUOUS_CONTACT_MESSAGE, Snackbar.LENGTH_LONG).show()
             }
 
@@ -395,11 +394,11 @@ class MainActivity : AppCompatActivity() {
             scanCautionResultAdapter.notifyDataSetChanged()
             scanSafeResultAdapter.notifyDataSetChanged()
             if (cautionScanResults.size + threatScanResults.size >= CROWD_MIN) {
-                // TODO crowdWarning.show()
+                // TODO SHOW SNACKBAR
                 Snackbar.make(findViewById(R.id.threat_view), CROWD_MESSAGE, Snackbar.LENGTH_LONG).show()
             }
             if (threatScanResults.size >= BUBBLE_MAX) {
-                // TODO bubbleWarning.show()
+                // TODO SHOW SNACKBAR
                 Snackbar.make(findViewById(R.id.threat_view), BUBBLE_MESSAGE, Snackbar.LENGTH_LONG).show()
             }
         }
