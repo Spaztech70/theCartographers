@@ -1,7 +1,6 @@
 package com.example.mybleapplication
 
-/*
- * @author Sanford Johnston
+/* @author Sanford Johnston
  * @date November 25, 2020
  * CS 488 Senior Project
  * Aggie oCT COVID-19
@@ -43,25 +42,30 @@ class DeviceLinkedNode(){
     }
 
     /**
-     * Accessor method to get the data from this node.
+     * Accessor method to get the total time from this node.
      * @param - none
      * @return
-     *   the data from this node
+     *   totalTime
      **/
     open fun getTotalTime(): Long {
         return totalTime
     }
 
+    /**
+     * Accessor method to get the end time for this node.
+     * @param - none
+     * @return
+     *   endTime
+     **/
     open fun getEndTime(): Long {
         return endTime
     }
 
     /**
-     * Accessor method to get a reference to the next node after this node.
+     * General method to update the total time for this node.
      * @param - none
      * @return
-     *   a reference to the node after this node (or the null reference if there
-     *   is nothing after this node)
+     *   none
      **/
     open fun updateTime(){
         endTime = System.currentTimeMillis()
@@ -69,10 +73,23 @@ class DeviceLinkedNode(){
     }
 
 
+    /**
+     * Accessor method to get a reference to the node that is ahead of this node.
+     * @param - none
+     * @return
+     *     future: a reference to the node before this node (or the null reference if there is nothing
+     *     before this node).
+     */
     open fun getFuture(): DeviceLinkedNode{
         return future
     }
 
+    /**
+     * Setter method to set the start time for this node.
+     * @param - sTime: a long integer object.
+     * @return
+     *   none
+     **/
     open fun setNewTime(sTime: Long) {
         startTime = sTime
         updateTime()

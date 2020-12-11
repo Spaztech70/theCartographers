@@ -1,7 +1,6 @@
 package com.example.mybleapplication
 
-/*
- * @author Sanford Johnston
+/* @author Sanford Johnston
  * @date November 25, 2020
  * CS 488 Senior Project
  * Aggie oCT COVID-19
@@ -17,9 +16,14 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.scan_results.view.*
 import org.jetbrains.anko.layoutInflater
 
+/* ScanResultAdapter displays the scan results from a list of DeviceLinkedList objects
+ * @param items is a list of DeviceLinkedList(s)
+ * @param onClickListener: triggers the display of devices when a scan is started.
+ * Scan results are displayed in a RecyclerView
+ */
 class ScanResultAdapter(
     private val items: List<DeviceLinkedList>,
-    private val deviceClass: BluetoothClass.Device,
+    private val device: BluetoothClass.Device,
     private val onClickListener: ((device: DeviceLinkedList) -> Unit)) :
     RecyclerView.Adapter<ScanResultAdapter.ViewHolder>() {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -40,6 +44,11 @@ class ScanResultAdapter(
     }
 
 
+    /* ViewHolder populates the MAC address, time of contact and distance of a device in
+     * a scan_result window.
+     * @param view is the View that holds a scan_result object.
+     * @onClickListener triggers the display of devices when a scan is started.
+     */
     class ViewHolder(
         private val view: View,
         private val onClickListener: ((device: DeviceLinkedList) -> Unit)

@@ -6,11 +6,11 @@ import androidx.annotation.RequiresApi
 import org.jetbrains.anko.db.NULL
 import java.util.*
 import kotlin.math.pow
-/*
- * @author Sanford Johnston
+/* @author Sanford Johnston
  * @date November 25, 2020
  * CS 488 Senior Project
  * Aggie oCT COVID-19
+ * DeviceLinkedList
  */
 
 /**
@@ -47,10 +47,12 @@ class DeviceLinkedList(scanResult: ScanResult){
     private var cursor = head
     private var count = 0
 
+    // Return unique ID of this device
     open fun getId(): String{
          return uniqueId
     }
 
+    // Update end time of head node. Update accumulated time of this device.
     open fun updateTime(){
         // check if head endTime is > 5:01 minutes:seconds old
         // if greater, add new node to head.
@@ -68,14 +70,14 @@ class DeviceLinkedList(scanResult: ScanResult){
         } while (cursor != head)
     }
 
-    // add node to chain
+    // add time node to head of chain
     open fun addHead() {
         head.addFutureNode()
         head = head.getFuture()
-        updateTime()
         count++
     }
 
+    // remove time node from end of chain
     open fun removeTail(){
         // if more than 1 node in chain
         if (tail != head) {
@@ -89,33 +91,37 @@ class DeviceLinkedList(scanResult: ScanResult){
             count = 1
         }
         setCurrentTime()
-        updateTime()
     }
 
+    // Return accumulated contact time of this device
     open fun getAccTime(): Long{
         return accumulatedTime
     }
 
+    // Return number of time nodes belonging to this device
     open fun size(): Int {
         return count
     }
 
+    // Return measured distance of this device
     @RequiresApi(Build.VERSION_CODES.O)
     open fun getDistance(): Double {
         return dist
     }
 
+    // Set measured distance of this device
     @RequiresApi(Build.VERSION_CODES.O)
     open fun setDistance(distance: Double) {
         dist = distance
         setCurrentTime()
-        updateTime()
     }
 
+    // Set current time for this device
     open fun setCurrentTime(){
         head.updateTime()
     }
 
+    // Return most recent contact time for this device from the head node TotalTime
     open fun getCurrentTime(): Long{
         return head.getEndTime()
     }

@@ -1,9 +1,9 @@
 package com.example.mybleapplication
-/*
- * @author Sanford Johnston
+/* @author Sanford Johnston
  * @date November 25, 2020
  * CS 488 Senior Project
  * Aggie oCT COVID-19
+ * BLE Proximity Warning System
  */
 
 import android.Manifest
@@ -31,13 +31,17 @@ import kotlinx.coroutines.delay
 import org.jetbrains.anko.alert
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
+import kotlin.math.log
 import kotlin.math.pow
 
+/*******************************************
+ * Constants: variables and values
+ *******************************************/
 private const val ENABLE_BLUETOOTH_REQUEST_CODE = 1
 private const val LOCATION_PERMISSION_REQUEST_CODE = 2
 private const val CAUTION_DISTANCE = 15.0
 private const val THREAT_DISTANCE = 6.0 // TODO change to 6
-private const val N = 10.0
+private const val N = 4.0
 private const val TEN = 10.0
 private const val METERS_TO_FEET = 3.28083333
 private const val MEASURED_POWER_DEFAULT = 5.0
@@ -55,6 +59,13 @@ private const val ACCUMULATED_CONTACT_MESSAGE = "!!ALERT!! Repeated contact with
 var listDevice = mutableListOf<DeviceLinkedList>()
 var storeDevice = mutableListOf<DeviceLinkedList>()
 
+/* The system scans for nearby devices, measures their proximity from a combination of signal
+ * strength and measured power, displays the scan results, and monitors all devices for the four
+ * warning conditions
+ * This application must be tested on an actual Android device. A virtual device does not have the
+ * Bluetooth Low Energy hardware.
+ * Warnings are displayed using a Snackbar object.
+ */
 class MainActivity : AppCompatActivity() {
 
     /*******************************************
@@ -269,37 +280,39 @@ class MainActivity : AppCompatActivity() {
     /*******************************************
      * Callback bodies
      *******************************************/
-
+    /* scanCallback is where the heart of the BLE Proximity Warning System lies.
+     * It utilizes two lists: listDevice and storeDevice to display and track and nearby devices
+     */
     private val scanCallback = object : ScanCallback() {
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-            /*
-            Formula:
-            Distance
-            Measured Power
-            RSSI
-            N (Constant depends on the Environmental factor. Range 2-4)
-            Distance = 10 ^ ((Measured Power – RSSI)/(10 * N))
+            /* Formula:
+             * Distance
+             * Measured Power
+             * RSSI
+             * N (Constant depends on the Environmental factor. Range 2-4)
+               Distance = 10 ^ ((Measured Power – RSSI)/(10 * N))
              */
-            var distance = if(result.txPower > 0) {
-                METERS_TO_FEET * TEN.pow((result.txPower + result.rssi).toDouble() / (TEN * N))
-            } else {
-                MEASURED_POWER_DEFAULT
-            }
+            var distance = if(result.txPower > 0)
+                METERS_TO_FEET * TEN.pow(((result.txPower + result.rssi).toDouble()) / (TEN * N))
+            else
+                METERS_TO_FEET * TEN.pow(((MEASURED_POWER_DEFAULT + result.rssi).toDouble()) / (TEN * N))
 
-            /*
-            The contents of each display are coming from here.
-             */
-            /* we can store the results of the scan in the DeviceLinkedList here
+            /* The contents of each display are coming from here.
+             * we can store the results of the scan in the storeDevice if the device is not in range
+             * anymore.
+             * Devices are stored as
                 * device ID (mac or UUID)
                 * distance
-             * check deviceList for existence of device
+                * accumulated contact time
+             * check the active listDevice for existence of found device
              * update list
                 * update distance OR
-                * add device to list
+                * add new device to list
              * sort list
-             * store markers for begin/end indexes for the 3 safety zones
-             * call the different scan Results Adapters and assign it a new begin/end portion of the deviceList to display
+             * divide listDevice into 3 lists which are subset that represent the 3 safety zones
+             * call the different scan Results Adapters and assign it the appropriate deviceList
+             * to display
              */
             var found = false
             var stored = false
@@ -336,11 +349,9 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (found && listDevice[i].getAccTime() > ACCUMULATED_CONTACT*1000){
-                // TODO SHOW SNACKBAR
                 Snackbar.make(findViewById(R.id.threat_view), ACCUMULATED_CONTACT_MESSAGE, Snackbar.LENGTH_LONG).show()
             }
             if (found && listDevice[i].head.getTotalTime() > CONTINUOUS_CONTACT*1000){
-                // TODO SHOW SNACKBAR
                 Snackbar.make(findViewById(R.id.threat_view), CONTINUOUS_CONTACT_MESSAGE, Snackbar.LENGTH_LONG).show()
             }
 
@@ -381,10 +392,12 @@ class MainActivity : AppCompatActivity() {
             // re-populate the recycler view lists
             index = 0
             while (index < listDevice.size) {
-                if (listDevice[index].getDistance() <= THREAT_DISTANCE)
-                    threatScanResults.add(listDevice[index])
-                else if (listDevice[index].getDistance() <= CAUTION_DISTANCE)
-                    cautionScanResults.add(listDevice[index])
+                if (listDevice[index].getDistance() <= THREAT_DISTANCE) {
+                    listDevice[index].updateTime()
+                    threatScanResults.add(listDevice[index]) }
+                else if (listDevice[index].getDistance() <= CAUTION_DISTANCE) {
+                    listDevice[index].updateTime()
+                    cautionScanResults.add(listDevice[index]) }
                 else safeScanResults.add(listDevice[index])
                 index++
             }
@@ -393,12 +406,10 @@ class MainActivity : AppCompatActivity() {
             scanThreatResultAdapter.notifyDataSetChanged()
             scanCautionResultAdapter.notifyDataSetChanged()
             scanSafeResultAdapter.notifyDataSetChanged()
-            if (cautionScanResults.size + threatScanResults.size >= CROWD_MIN) {
-                // TODO SHOW SNACKBAR
+            if (threatScanResults.size >= CROWD_MIN) {
                 Snackbar.make(findViewById(R.id.threat_view), CROWD_MESSAGE, Snackbar.LENGTH_LONG).show()
             }
-            if (threatScanResults.size >= BUBBLE_MAX) {
-                // TODO SHOW SNACKBAR
+            if ((threatScanResults.size >= BUBBLE_MAX) && (distance < THREAT_DISTANCE/2)) {
                 Snackbar.make(findViewById(R.id.threat_view), BUBBLE_MESSAGE, Snackbar.LENGTH_LONG).show()
             }
         }
